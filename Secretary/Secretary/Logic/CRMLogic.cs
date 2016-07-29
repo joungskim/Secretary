@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Policy;
 using System.Text;
@@ -21,10 +22,6 @@ namespace Secretary.Logic
             DTModelList = new List<DateTimeModel>(); //add data file read and update list with time history
             HoursWorkedToday = TimeSpan.Zero;
             HoursUntilLeave = new TimeSpan(0, 8, 0, 0);
-            if (HasWorkedToday())
-            {
-                SetHoursWorkedToday();
-            }
         }
 
         //Gets Date Time String Format
@@ -37,18 +34,12 @@ namespace Secretary.Logic
         public string AddTimeList(DateTime cur, bool clockIn)
         {
             DTModelList.Add(new DateTimeModel {ClockIn = clockIn, dateTime = cur});
-
             return cur.ToString(clockIn ? "yyyy MMMM dd - hh:mm:ss tt [In]" : "yyyy MMMM dd - hh:mm:ss tt [Out]");
         }
 
         public string GetClockOutTime()
         {
-            if (DTModelList == null)
-            {
-                return "Clock In For Clockout Time";
-            }
-
-            return DateTime.Now.Add(HoursUntilLeave).ToString("yyyy MMMM dd - hh:mm:ss tt");
+            return DTModelList == null ? "Clock In For Clockout Time" : DateTime.Now.Add(HoursUntilLeave).ToString("yyyy MMMM dd - hh:mm:ss tt");
         }
 
         public string GetHoursRemaining()
@@ -58,6 +49,7 @@ namespace Secretary.Logic
 
         public string SubtractHoursUntilLeave()
         {
+            if (HoursUntilLeave < TimeSpan.FromHours(1)) return HoursUntilLeave.ToString();
             HoursUntilLeave = HoursUntilLeave.Subtract(TimeSpan.FromHours(1));
             return HoursUntilLeave.ToString();
         }
@@ -67,20 +59,26 @@ namespace Secretary.Logic
             return HoursUntilLeave.ToString();
         }
 
+        public string ClockedHoursByList(int daysAgo)
+        {
+            return DTCalc.GetTimeWorkedToday(DTModelList, daysAgo).ToString("g");
+        }
         public string SubtractSecondsFromRemainingTime()
         {
-            HoursUntilLeave = HoursUntilLeave.Subtract(TimeSpan.FromSeconds(1));
+            if(!(HoursUntilLeave <= TimeSpan.Zero)) HoursUntilLeave = HoursUntilLeave.Subtract(TimeSpan.FromSeconds(1));
             return HoursUntilLeave.ToString();
         }
 
-        public void SetHoursWorkedToday()
+        public string AddHoursWorkedToday()
         {
-            HoursWorkedToday = DTCalc.GetTimeWorkedToday(DTModelList.Select(x => x.dateTime).ToList());
+            HoursWorkedToday += TimeSpan.FromSeconds(1);
+            return HoursWorkedToday.ToString();
         }
 
-        public bool HasWorkedToday()
+        public string GetHoursWorkedToday()
         {
-            return DTCalc.GetTimeWorkedToday(DTModelList.Select(x => x.dateTime).ToList()) > TimeSpan.Zero;
+            return HoursWorkedToday.ToString();
         }
+
     }
 }
